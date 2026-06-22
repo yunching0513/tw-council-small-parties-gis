@@ -135,7 +135,8 @@ def aggregate(recs: list[dict]) -> dict[tuple, dict]:
                 "year": r["year"], "villcode": r["villcode"], "county": r["county"],
                 "town": r["town"], "village": r["village"],
                 "total": 0, "kmt": 0, "dpp": 0, "tpp": 0, "small": 0, "focus": 0,
-                "indep": 0, "other": 0, "npp": 0, "tsp": 0, "obasan": 0,
+                "indep": 0, "other": 0,
+                "npp": 0, "tsp": 0, "obasan": 0, "green": 0, "sdp": 0,
                 "small_cand": 0, "focus_cand": 0,
                 "_byparty": defaultdict(int),
             }
@@ -260,6 +261,7 @@ def write_map_json(agg: dict, partylist: dict, geo: dict) -> None:
             "tot": a["total"],
             "sm": a["small"], "fo": a["focus"],
             "npp": a["npp"], "tsp": a["tsp"], "ob": a["obasan"],
+            "green": a["green"], "sdp": a["sdp"],
             "kmt": a["kmt"], "dpp": a["dpp"], "tpp": a["tpp"],
             "ind": a["indep"], "oth": a["other"],
             "smS": round(100 * a["small"] / tot, 1),
