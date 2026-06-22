@@ -152,7 +152,8 @@
 
   // ---- 資訊框 ----
   const info = document.getElementById("info");
-  function showInfo(vc) {
+  let POLLS = null;   // 投開票所下鑽資料（pollstations.json）
+  function showInfo(vc, full) {
     const n = D[vc]; if (!n) { info.style.display = "none"; return; }
     const Y = n.y || {};
     const line = (y) => {
@@ -173,10 +174,23 @@
     const p = n.pl && (n.pl["2024"] || n.pl["2020"]);
     if (p) pl = `<div style="font-size:11px;color:var(--ink-faint);margin:8px 0 3px">政黨票挺小黨（不分區）</div>`+
       `<table><tr><td>小黨合計</td><td class="r"><b style="color:#A6392C">${p.sm}%</b></td></tr></table>`;
+    // 投開票所下鑽（點擊村里時顯示）：2022 區域議員各投開票所小黨得票率
+    let polls = "";
+    if (full && POLLS && POLLS[vc]) {
+      const ps = POLLS[vc].p.slice().sort((a, b) => b[2] - a[2]);
+      polls = `<div style="font-size:11px;color:var(--ink-faint);margin:9px 0 3px">2022 投開票所小黨得票率（共 ${ps.length} 所）</div>` +
+        `<table>` + ps.slice(0, 12).map(([no, tot, pct]) =>
+          `<tr><td>${no} 所</td><td class="r" style="color:#9a9a9a">${tot} 票</td>` +
+          `<td class="r"><b style="color:#A6392C">${pct}%</b></td></tr>`).join("") +
+        (ps.length > 12 ? `<tr><td colspan="3" style="color:var(--ink-faint);font-size:10.5px">…列小黨得票率前 12 高</td></tr>` : "") +
+        `</table>`;
+    } else if (full && POLLS && !POLLS[vc]) {
+      polls = `<div style="font-size:10.5px;color:var(--ink-faint);margin:9px 0 0">（此里無 2022 區域議員投開票所資料）</div>`;
+    }
     info.innerHTML = `<div class="vname">${n.v||"（未知村里）"}</div>`+
       `<div class="vloc">${n.c||""} ${n.t||""}　${vc}</div>`+
       `<table><tr><td style="color:var(--ink-faint)">屆別</td><td class="r" style="color:var(--ink-faint)">小黨%</td><td class="r" style="color:var(--ink-faint)">領先黨</td></tr>`+
-      line("2014") + line("2018") + line("2022") + `</table>` + foc + pl;
+      line("2014") + line("2018") + line("2022") + `</table>` + foc + pl + polls;
     info.style.display = "block";
   }
 
@@ -186,16 +200,18 @@
       style: styleFn,
       onEachFeature: (f, lyr) => {
         layerByVc[f.properties.VILLCODE] = lyr;
-        lyr.on("mouseover", () => { showInfo(f.properties.VILLCODE);
+        lyr.on("mouseover", () => { showInfo(f.properties.VILLCODE, false);
           lyr.bringToFront && lyr.bringToFront();
           lyr.setStyle({ stroke: true, color: "#333333", weight: 1 }); });
         lyr.on("mouseout", () => lyr.setStyle({ stroke: false }));
-        lyr.on("click", () => { showInfo(f.properties.VILLCODE);
+        lyr.on("click", () => { showInfo(f.properties.VILLCODE, true);
           map.fitBounds(lyr.getBounds(), { maxZoom: 13, padding: [40,40] }); });
       }
     }).addTo(map);
     refresh();
     document.getElementById("loading").style.display = "none";
+    // 投開票所下鑽資料（小檔，背景載入；點擊村里時即可顯示）
+    fetch("pollstations.json").then(r => r.json()).then(j => { POLLS = j; }).catch(() => {});
   }
 
   async function load() {
@@ -236,7 +252,7 @@
       const n = D[vc];
       if ((n.v && n.v.includes(q)) || (n.t && n.t.includes(q))) {
         const lyr = layerByVc[vc];
-        if (lyr) { map.fitBounds(lyr.getBounds(), { maxZoom: 13, padding: [40,40] }); showInfo(vc); }
+        if (lyr) { map.fitBounds(lyr.getBounds(), { maxZoom: 13, padding: [40,40] }); showInfo(vc, true); }
         return;
       }
     }
