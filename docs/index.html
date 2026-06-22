@@ -104,12 +104,36 @@
   .spin{width:24px;height:24px;border:2px solid var(--line);border-top-color:var(--shu);border-radius:999px;animation:s 1.1s var(--ease) infinite}
   @keyframes s{to{transform:rotate(360deg)}}
   .leaflet-bar a{color:var(--ink)!important;border-radius:5px}
+
+  /* 面板收合鈕（手機才顯示）*/
+  #panelToggle{display:none;position:absolute;top:12px;right:12px;z-index:2;width:34px;height:34px;
+    border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;
+    font-size:17px;line-height:1;cursor:pointer;align-items:center;justify-content:center}
+
+  /* ── 手機 RWD：面板變底部可收合抽屜 ── */
+  @media (max-width:680px){
+    #panel{top:auto;bottom:0;left:0;right:0;width:auto;max-height:54vh;
+      border-radius:16px 16px 0 0;padding:16px 18px 18px;
+      box-shadow:0 -4px 24px rgba(0,0,0,.12)}
+    #panel.collapsed{max-height:64px;overflow:hidden;padding-bottom:10px}
+    #panel.collapsed .sub,#panel.collapsed .grp,#panel.collapsed .foot{display:none}
+    #panelToggle{display:flex}
+    #panel h1{font-size:25px}
+    #panel .brand{margin-bottom:3px}
+    #panel .sub{margin:8px 0 16px}
+    .grp{margin-bottom:16px}
+    #info{top:10px;bottom:auto;left:10px;right:10px;width:auto;max-height:42vh;overflow:auto}
+    .hint{display:none}
+    .seg button{min-width:0;padding:9px 8px}
+    .leaflet-control-zoom{margin-bottom:58vh!important}
+  }
 </style>
 </head>
 <body>
 <div id="map"></div>
 
 <div id="panel">
+  <button id="panelToggle" aria-label="收合/展開面板">▾</button>
   <div class="brand">Shinayaka · 村里級 GIS</div>
   <h1><span class="zh">進擊的小黨</span></h1>
   <p class="sub">2014 / 2018 / 2022 三屆縣市・直轄市議員選舉得票（含落選）。為時代力量、台灣基進、小民參政歐巴桑聯盟等小黨佈局而整理。</p>
@@ -156,6 +180,13 @@
       <button data-poi="transit"><span class="dot" style="background:#2E6DA4"></span>車站</button>
     </div>
     <div id="poiNote">放大到鄉鎮層級可顯示拜票點</div>
+  </div>
+
+  <div class="grp">
+    <label>道路 ・ Roads</label>
+    <div class="seg">
+      <button id="roadBtn" style="flex:1 1 100%"><span class="dot" style="background:#6E7E96"></span>國道・省道・主要道路</button>
+    </div>
   </div>
 
   <div class="grp">

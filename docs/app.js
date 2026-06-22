@@ -242,6 +242,13 @@
     }
   });
 
+  // ---- 手機：面板收合 ----
+  const panel = document.getElementById("panel");
+  const panelToggle = document.getElementById("panelToggle");
+  const setCollapsed = (c) => { panel.classList.toggle("collapsed", c); panelToggle.textContent = c ? "▴" : "▾"; };
+  if (window.innerWidth <= 680) setCollapsed(true);
+  panelToggle.onclick = () => setCollapsed(!panel.classList.contains("collapsed"));
+
   // ---- 拜票地點 POI（市場/郵局/宮廟/車站）----
   const POI_STYLE = {
     market:  { c: "#D9772B", label: "市場" },
@@ -297,4 +304,38 @@
         .catch(() => { poiLoading = false; poiNote.textContent = "拜票點資料載入失敗"; });
     } else renderPOI();
   });
+
+  // ---- 道路圖層（國道/省道/主要道路）----
+  map.createPane("roadPane");
+  map.getPane("roadPane").style.zIndex = 440;   // 面量圖(400)之上、標籤/POI 之下
+  const roadRenderer = L.canvas({ pane: "roadPane" });
+  let ROADS = null, roadsLoading = false, roadsOn = false, roadLayer = null;
+  const roadStyle = (f) => {
+    const hw = f.properties.hw;
+    if (hw === "motorway") return { color: "#54616E", weight: 2.2, opacity: .7 };
+    if (hw === "trunk")    return { color: "#73808D", weight: 1.7, opacity: .62 };
+    return { color: "#9aa3ad", weight: 1, opacity: .5 };   // primary 主要市區幹道
+  };
+  function renderRoads() {
+    if (roadLayer) { map.removeLayer(roadLayer); roadLayer = null; }
+    if (!roadsOn || !ROADS) return;
+    // 全台視野只畫國道/省道骨架；放大到 zoom≥11 才加主要市區幹道
+    const feats = map.getZoom() >= 11 ? ROADS.features
+      : ROADS.features.filter(f => f.properties.hw !== "primary");
+    roadLayer = L.geoJSON({ type: "FeatureCollection", features: feats },
+      { renderer: roadRenderer, style: roadStyle, interactive: false }).addTo(map);
+  }
+  map.on("zoomend", () => { if (roadsOn) renderRoads(); });
+
+  const roadBtn = document.getElementById("roadBtn");
+  const roadLabel = roadBtn.lastChild;   // 文字節點
+  roadBtn.onclick = () => {
+    roadsOn = !roadsOn; roadBtn.classList.toggle("on", roadsOn);
+    if (roadsOn && !ROADS && !roadsLoading) {
+      roadsLoading = true; roadLabel.nodeValue = " 載入道路…";
+      fetch("roads.json").then(r => r.json())
+        .then(j => { ROADS = j; roadsLoading = false; roadLabel.nodeValue = "國道・省道・主要道路"; renderRoads(); })
+        .catch(() => { roadsLoading = false; roadLabel.nodeValue = "國道・省道・主要道路"; });
+    } else renderRoads();
+  };
 })();
