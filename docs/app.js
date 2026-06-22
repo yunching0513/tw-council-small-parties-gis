@@ -241,4 +241,60 @@
       }
     }
   });
+
+  // ---- 拜票地點 POI（市場/郵局/宮廟/車站）----
+  const POI_STYLE = {
+    market:  { c: "#D9772B", label: "市場" },
+    post:    { c: "#2E7D46", label: "郵局" },
+    temple:  { c: "#B23A86", label: "宮廟" },
+    transit: { c: "#2E6DA4", label: "車站" },
+  };
+  const POI_CAP = 600;      // 每類在當前視野的顯示上限
+  const POI_MINZOOM = 11;   // 放大到此層級才顯示（避免全台滿版）
+  let POI = null, poiLoading = false;
+  const poiOn = new Set();
+  const poiNote = document.getElementById("poiNote");
+  // 專屬高層 pane，確保標記畫在面量圖之上
+  map.createPane("poiPane");
+  map.getPane("poiPane").style.zIndex = 650;
+  const poiRenderer = L.canvas({ pane: "poiPane" });
+  const poiLayer = L.layerGroup().addTo(map);
+
+  function renderPOI() {
+    poiLayer.clearLayers();
+    if (poiOn.size === 0) { poiNote.textContent = "勾選類別以顯示拜票點"; return; }
+    if (!POI) { poiNote.textContent = poiLoading ? "載入拜票點資料…" : ""; return; }
+    if (map.getZoom() < POI_MINZOOM) { poiNote.textContent = "放大到鄉鎮層級以顯示拜票點"; return; }
+    const b = map.getBounds();
+    let shown = 0, capped = false;
+    for (const cat of poiOn) {
+      const arr = POI[cat] || []; let n = 0;
+      for (const p of arr) {
+        const lng = p[0], lat = p[1];
+        if (lat < b.getSouth() || lat > b.getNorth() || lng < b.getWest() || lng > b.getEast()) continue;
+        if (n >= POI_CAP) { capped = true; break; }
+        L.circleMarker([lat, lng], { renderer: poiRenderer, radius: 5, color: "#fff",
+          weight: 1, fillColor: POI_STYLE[cat].c, fillOpacity: .95 })
+          .bindPopup(`<b>${p[2]}</b><br><span style="color:#9a9a9a">${POI_STYLE[cat].label}</span>`)
+          .addTo(poiLayer);
+        n++; shown++;
+      }
+    }
+    poiNote.textContent = shown
+      ? (capped ? `顯示 ${shown} 個（部分類別達上限，再放大看更多）` : `顯示 ${shown} 個拜票點`)
+      : "此範圍內無所選類別據點";
+  }
+  map.on("moveend zoomend", () => { if (poiOn.size) renderPOI(); });
+
+  document.querySelectorAll("#poiSeg button").forEach(b => b.onclick = () => {
+    const cat = b.dataset.poi;
+    if (poiOn.has(cat)) { poiOn.delete(cat); b.classList.remove("on"); }
+    else { poiOn.add(cat); b.classList.add("on"); }
+    if (!POI && !poiLoading) {
+      poiLoading = true; poiNote.textContent = "載入拜票點資料…";
+      fetch("canvass.json").then(r => r.json())
+        .then(j => { POI = j; poiLoading = false; renderPOI(); })
+        .catch(() => { poiLoading = false; poiNote.textContent = "拜票點資料載入失敗"; });
+    } else renderPOI();
+  });
 })();

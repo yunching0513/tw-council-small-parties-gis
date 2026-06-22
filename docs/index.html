@@ -59,6 +59,8 @@
     letter-spacing:var(--ls);transition:all .5s var(--ease)}
   .seg button:hover{border-color:var(--accent)}
   .seg button.on{background:var(--shu-soft);border-color:var(--shu);color:#7a2a20;font-weight:500}
+  .seg button .dot{display:inline-block;width:8px;height:8px;border-radius:999px;margin-right:5px;vertical-align:middle;border:1px solid rgba(0,0,0,.15)}
+  #poiNote{font-size:10.5px;color:var(--ink-faint);margin-top:8px;letter-spacing:.01em;line-height:1.5}
   .layerbtn{display:block;width:100%;text-align:left;padding:13px 14px;margin-bottom:8px;
     border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:5px;cursor:pointer;
     transition:all .5s var(--ease)}
@@ -146,6 +148,17 @@
   </div>
 
   <div class="grp">
+    <label>拜票地點 ・ Canvass spots</label>
+    <div class="seg" id="poiSeg">
+      <button data-poi="market"><span class="dot" style="background:#D9772B"></span>市場</button>
+      <button data-poi="post"><span class="dot" style="background:#2E7D46"></span>郵局</button>
+      <button data-poi="temple"><span class="dot" style="background:#B23A86"></span>宮廟</button>
+      <button data-poi="transit"><span class="dot" style="background:#2E6DA4"></span>車站</button>
+    </div>
+    <div id="poiNote">放大到鄉鎮層級可顯示拜票點</div>
+  </div>
+
+  <div class="grp">
     <label>圖例 ・ Legend</label>
     <div id="legend"></div>
   </div>
@@ -153,6 +166,7 @@
   <div class="foot">
     資料：<a href="https://github.com/kiang/db.cec.gov.tw" target="_blank" rel="noopener">中選會選舉資料庫（江明宗整理）</a>、
     <a href="https://github.com/kiang/taiwan_basecode" target="_blank" rel="noopener">村里界圖</a>（CC BY 4.0）。
+    拜票點 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors（ODbL）。
     村里界以 2022 為準；2014/2018 經代碼校接，少數改制里可能缺值。
   </div>
 </div>
