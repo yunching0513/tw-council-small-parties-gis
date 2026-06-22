@@ -25,23 +25,28 @@
 ## 粒度
 
 - **主圖：村里層級**（涵蓋全台 22 縣市約 7,700 里，三屆齊全）。
-- **下鑽：投開票所層級**（規劃中；中選會原始投開票所明細不在上述鏡像，需另抓，
-  見 `docs/投開票所下鑽.md`）。
+- **下鑽：投開票所層級**（已完成）。點擊村里 → 顯示該里 2022 區域議員各投開票所
+  小黨得票率（資料來自中選會 votedata.zip，見 `build_pollstations.py`）。
+
+## 額外圖層
+
+- **拜票地點**：市場/夜市、郵局、宮廟、車站（OSM，`fetch_canvass_poi.py`）。
+- **道路**：國道/省道/主要道路（OSM，`fetch_roads.py`）。
+- **手機 RWD**：面板於小螢幕變底部可收合抽屜。
 
 ## 流程
 
 ```bash
-# 1) 下載原始資料到 data/raw/（git sparse-checkout + curl，約 130MB）
-python3 fetch_data.py
+# 1) 下載村里得票/界圖（約 130MB）；ETL → CSV + 村里指標；建圖 → docs/
+python3 fetch_data.py && python3 build_dataset.py && python3 build_map.py
 
-# 2) ETL → 正規化 CSV + 村里指標
-python3 build_dataset.py
+# 2) 額外圖層資料（皆輸出至 docs/，可獨立執行）
+python3 fetch_canvass_poi.py     # 拜票地點 → docs/canvass.json
+python3 fetch_roads.py           # 道路（需 npx mapshaper 簡化）→ docs/roads.json
+python3 fetch_votedata.py        # 下載中選會 votedata.zip（投開票所原始）
+python3 build_pollstations.py    # 投開票所下鑽 → docs/pollstations.json
 
-# 3) 簡化村里界圖 + 產生網頁地圖資料 → docs/
-#    （需 Node 的 mapshaper：npx 會自動取用）
-python3 build_map.py
-
-# 4) 本機預覽
+# 3) 本機預覽
 python3 -m http.server -d docs 8000   # 開 http://localhost:8000
 ```
 
