@@ -1,0 +1,2 @@
+# Python 端只用標準函式庫（json/csv/urllib）；ETL 不需第三方套件。
+# 幾何簡化用 Node 的 mapshaper（見 README），不靠 Python GIS 套件，安裝最輕量。
