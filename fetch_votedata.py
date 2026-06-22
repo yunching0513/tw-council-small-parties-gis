@@ -12,8 +12,8 @@ fetch_votedata.py — 下載中選會「選舉資料庫」votedata.zip（投開�
 """
 from __future__ import annotations
 import argparse
+import subprocess
 import sys
-import urllib.request
 import zipfile
 from pathlib import Path
 
@@ -36,16 +36,10 @@ def download() -> None:
         print(f"✓ 已存在 {ZIP.name}（{ZIP.stat().st_size/1e6:.0f}MB），略過下載")
         return
     RAW.mkdir(parents=True, exist_ok=True)
-    print("下載 votedata.zip（約 110MB）…")
-    req = urllib.request.Request(URL, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=600) as r, open(ZIP, "wb") as f:
-        total = 0
-        while True:
-            chunk = r.read(1 << 20)
-            if not chunk:
-                break
-            f.write(chunk); total += len(chunk)
-    print(f"完成 {total/1e6:.0f}MB")
+    print("下載 votedata.zip（約 110MB，用 curl 走系統憑證庫驗證）…")
+    # data.cec.gov.tw 憑證缺 Subject Key Identifier，Python ssl 會擋但 curl/系統信任庫可正常驗證
+    subprocess.run(["curl", "-fSL", "--retry", "2", "-A", UA, "-o", str(ZIP), URL], check=True)
+    print(f"完成 {ZIP.stat().st_size/1e6:.0f}MB")
 
 
 def main() -> None:
