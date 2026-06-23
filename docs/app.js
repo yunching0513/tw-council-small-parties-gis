@@ -227,10 +227,25 @@
           }).join("") + `</table>`;
       }
     }
+    // 本選區歷屆最低當選票數（門檻＝最後一席）
+    let thr = "";
+    if (full && ROSTERS && ROSTERS.v[vc]) {
+      const parts = ["2014", "2018", "2022"].map(yr => {
+        const zid = ROSTERS.v[vc][yr];
+        const list = (zid != null) ? (ROSTERS.r[yr] || {})[zid] : null;
+        if (!list) return null;
+        const el = list.filter(c => c[4] === 1);
+        if (!el.length) return null;
+        const minw = Math.min(...el.map(c => c[3]));
+        return `<span style="color:var(--ink-faint)">${yr}</span> <b style="color:var(--shu)">${minw.toLocaleString()}</b>`;
+      }).filter(Boolean);
+      if (parts.length) thr = `<div style="font-size:11px;color:var(--ink-faint);margin:9px 0 2px">本選區最低當選票數（門檻・最後一席）</div>` +
+        `<div style="font-size:12.5px;letter-spacing:.02em">${parts.join("　")}</div>`;
+    }
     info.innerHTML = `<div class="vname">${n.v||"（未知村里）"}</div>`+
       `<div class="vloc">${n.c||""} ${n.t||""}　${vc}</div>`+
       `<table><tr><td style="color:var(--ink-faint)">屆別</td><td class="r" style="color:var(--ink-faint)">小黨%</td><td class="r" style="color:var(--ink-faint)">領先黨</td></tr>`+
-      line("2014") + line("2018") + line("2022") + `</table>` + foc + pl + polls + roster;
+      line("2014") + line("2018") + line("2022") + `</table>` + foc + pl + polls + thr + roster;
     info.style.display = "block";
   }
 
