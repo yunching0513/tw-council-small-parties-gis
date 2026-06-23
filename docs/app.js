@@ -467,4 +467,152 @@
     renderLabels();
   };
   window.__renderLabels = renderLabels;   // 供圖層/屆別切換時更新
+
+  // ---- 選區門檻分析 Modal ----
+  const SMALL_PARTIES = new Set(["時代力量","台灣基進","綠黨","社會民主黨","小民參政歐巴桑聯盟","樹黨","綠黨社會民主黨聯盟","人民民主黨","左翼聯盟"]);
+  const SM_COLOR = {"時代力量":"#C8862C","台灣基進":"#A6392C","社會民主黨":"#5C7186","綠黨":"#2E6B4E","小民參政歐巴桑聯盟":"#9C6BA3","樹黨":"#5E8C6A","左翼聯盟":"#8B6914"};
+  const SM_SHORT = {"時代力量":"時力","台灣基進":"基進","社會民主黨":"社民","綠黨":"綠黨","小民參政歐巴桑聯盟":"歐巴桑","樹黨":"樹黨","左翼聯盟":"左翼"};
+
+  let zmData = null, zmMaxW = 1;
+  let zmSc = "min_win", zmSd = 1;
+
+  function buildZoneAnalysis() {
+    if (!ROSTERS) return [];
+    const yr = "2022";
+    const zones = ROSTERS.r[yr] || {};
+    const zoneVills = {};
+    for (const vc in (ROSTERS.v || {})) {
+      const zid = ROSTERS.v[vc][yr];
+      if (zid == null) continue;
+      const zk = String(zid);
+      if (!zoneVills[zk]) zoneVills[zk] = [];
+      zoneVills[zk].push(vc);
+    }
+    const results = [];
+    for (const [zid, cands] of Object.entries(zones)) {
+      const elected = cands.filter(c => c[4] === 1);
+      if (!elected.length) continue;
+      const losers = cands.filter(c => c[4] === 0);
+      const minWin = elected.reduce((a,b) => a[3]<b[3]?a:b);
+      const maxWin = elected.reduce((a,b) => a[3]>b[3]?a:b);
+      const maxLose = losers.length ? losers.reduce((a,b) => a[3]>b[3]?a:b) : null;
+      const vills = zoneVills[zid] || [];
+      const county = vills.length ? ((D[vills[0]] && D[vills[0]].c) || "") : "";
+      const towns = [...new Set(vills.map(vc => (D[vc] && D[vc].t) || "").filter(Boolean))].sort();
+      const label = towns.slice(0,4).join("・") + (towns.length > 4 ? "…" : "");
+      const smCands = cands.filter(c => SMALL_PARTIES.has(c[1]));
+      const smTotal = smCands.reduce((s,c) => s+c[3], 0);
+      results.push({
+        county, label, seats: elected.length,
+        min_win: minWin[3], min_win_cand: minWin[0],
+        max_win: maxWin[3], max_win_cand: maxWin[0],
+        margin: maxLose ? minWin[3] - maxLose[3] : null,
+        sm_total: smTotal,
+        sm: smCands.sort((a,b)=>b[3]-a[3]).map(c=>[c[0],c[1],c[3]])
+      });
+    }
+    return results.sort((a,b) => a.county.localeCompare(b.county,"zh-TW") || a.label.localeCompare(b.label,"zh-TW"));
+  }
+
+  function zmRender() {
+    if (!zmData) return;
+    const c = document.getElementById("zmSel").value;
+    const q = document.getElementById("zmQ").value.toLowerCase();
+    const cap = +document.getElementById("zmCap").value;
+    const onlySm = document.getElementById("zmOnlySm").checked;
+    const onlyD = document.getElementById("zmOnlyD").checked;
+    document.getElementById("zmCapOut").textContent = cap >= 30000 ? "不限" : cap.toLocaleString("zh-TW");
+    let data = zmData.filter(r => {
+      if (c && r.county !== c) return false;
+      const t = r.label+r.county+(r.min_win_cand||"")+(r.max_win_cand||"")+(r.sm||[]).map(s=>s[0]+s[1]).join("");
+      if (q && !t.toLowerCase().includes(q)) return false;
+      if (r.min_win > cap) return false;
+      if (onlySm && !r.sm_total) return false;
+      if (onlyD && (r.margin == null || Math.abs(r.margin) >= 500)) return false;
+      return true;
+    });
+    const inf = zmSd > 0 ? Infinity : -Infinity;
+    data.sort((a,b) => {
+      const av = a[zmSc] != null ? a[zmSc] : inf;
+      const bv = b[zmSc] != null ? b[zmSc] : inf;
+      return zmSd * (typeof av === "string" ? av.localeCompare(bv,"zh-TW") : av-bv);
+    });
+    const tbody = document.getElementById("zmBody");
+    tbody.innerHTML = "";
+    document.getElementById("zmEmpty").style.display = data.length ? "none" : "block";
+    document.getElementById("zmMeta").textContent = `顯示 ${data.length} 個選區（2022，全台 ${zmData.length} 選區）`;
+    const fmt = n => n == null ? "—" : n.toLocaleString("zh-TW");
+    data.forEach(r => {
+      const tr = document.createElement("tr");
+      const smHtml = (r.sm||[]).map(([n,p,v]) =>
+        `<span style="color:${SM_COLOR[p]||"#888"};font-weight:500">${n}</span>` +
+        `<span style="font-size:10px;color:var(--ink-faint)"> ${SM_SHORT[p]||p} ${v.toLocaleString("zh-TW")}</span>`
+      ).join("<br>");
+      const mg = r.margin;
+      const mgStr = mg == null ? "—" : (mg>=0?"+":"") + mg.toLocaleString("zh-TW");
+      const mgCls = mg != null && Math.abs(mg) < 200 ? "zm-danger" : mg != null && mg > 800 ? "zm-ok" : "";
+      const bMin = Math.round(r.min_win/zmMaxW*80);
+      const bMax = Math.round(r.max_win/zmMaxW*80);
+      const bSm = r.sm_total ? Math.round(r.sm_total/zmMaxW*80) : 0;
+      tr.innerHTML =
+        `<td title="${r.county} ${r.label}">` +
+          `<span style="font-size:10px;color:var(--ink-faint)">${r.county}</span>` +
+          `<br><span style="font-weight:500;font-size:11.5px">${r.label}</span>` +
+        `</td>` +
+        `<td style="text-align:center"><span class="seat">${r.seats}</span></td>` +
+        `<td>` +
+          `<span class="n zm-danger">${fmt(r.min_win)}</span>` +
+          `<br><span class="cname">${r.min_win_cand||""}</span>` +
+          `<span class="mbar" style="width:${bMin}%;background:#D4958C;opacity:.8"></span>` +
+        `</td>` +
+        `<td>` +
+          `<span class="n">${fmt(r.max_win)}</span>` +
+          `<br><span class="cname">${r.max_win_cand||""}</span>` +
+          `<span class="mbar" style="width:${bMax}%;background:#9ab0c4;opacity:.7"></span>` +
+        `</td>` +
+        `<td>` +
+          (r.sm_total ?
+            `<span class="n" style="color:#1D6B50;font-weight:500">${fmt(r.sm_total)}</span>` +
+            `<span class="mbar" style="width:${bSm}%;background:#2E6B4E;opacity:.65"></span>` :
+            `<span style="opacity:.3;font-size:11px">—</span>`) +
+        `</td>` +
+        `<td class="n ${mgCls}" style="font-size:12px">${mgStr}</td>` +
+        `<td style="font-size:11px">${smHtml||'<span style="opacity:.3">無</span>'}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function zmInit() {
+    zmData = buildZoneAnalysis();
+    zmMaxW = Math.max(...zmData.map(r=>r.max_win));
+    const counties = [...new Set(zmData.map(r=>r.county))].sort();
+    const sel = document.getElementById("zmSel");
+    counties.forEach(c => { const o=document.createElement("option"); o.value=c; o.textContent=c; sel.appendChild(o); });
+    zmRender();
+  }
+
+  function zmOpen() {
+    document.getElementById("zoneModal").classList.add("open");
+    if (zmData) return;
+    if (ROSTERS) { zmInit(); return; }
+    document.getElementById("zmMeta").textContent = "載入選區資料中…";
+    const check = setInterval(() => { if (ROSTERS) { clearInterval(check); zmInit(); } }, 200);
+  }
+
+  document.getElementById("zoneBtn").onclick = zmOpen;
+  document.getElementById("zmClose").onclick = () => document.getElementById("zoneModal").classList.remove("open");
+  document.getElementById("zoneModal").onclick = (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("open"); };
+  document.querySelectorAll("#zmTable th[data-col]").forEach(th => {
+    th.addEventListener("click", () => {
+      if (zmSc === th.dataset.col) zmSd *= -1;
+      else { zmSc = th.dataset.col; zmSd = 1; }
+      document.querySelectorAll("#zmTable th").forEach(t => t.classList.remove("asc","desc"));
+      th.classList.add(zmSd === 1 ? "asc" : "desc");
+      zmRender();
+    });
+  });
+  ["zmSel","zmOnlySm","zmOnlyD"].forEach(id => document.getElementById(id).addEventListener("change", zmRender));
+  document.getElementById("zmCap").addEventListener("input", zmRender);
+  document.getElementById("zmQ").addEventListener("input", zmRender);
+  document.querySelector("#zmTable th[data-col='min_win']").classList.add("asc");
 })();

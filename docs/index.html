@@ -114,6 +114,49 @@
   @keyframes s{to{transform:rotate(360deg)}}
   .leaflet-bar a{color:var(--ink)!important;border-radius:5px}
 
+  /* ── 選區門檻分析 Modal ── */
+  #zoneModal{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.35);display:none;
+    align-items:center;justify-content:center;padding:20px}
+  #zoneModal.open{display:flex}
+  #zmBox{background:var(--panel);border-radius:8px;width:100%;max-width:920px;max-height:90vh;
+    display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);
+    box-shadow:0 8px 32px rgba(0,0,0,.18)}
+  #zmHead{display:flex;align-items:center;gap:12px;padding:18px 22px 0;flex:none}
+  #zmHead h2{font-family:"Noto Serif TC",serif;font-weight:700;font-size:17px;color:var(--ink-strong);
+    letter-spacing:.06em;margin:0;flex:1}
+  #zmClose{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-faint);
+    padding:6px;line-height:1;border-radius:4px}
+  #zmClose:hover{color:var(--ink)}
+  #zmCtrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 22px 8px;flex:none;
+    border-bottom:0.5px solid var(--line)}
+  #zmCtrl select,#zmCtrl input[type=text]{padding:6px 10px;border:0.5px solid var(--line);
+    border-radius:6px;font-size:12px;background:var(--panel);color:var(--ink);font-family:var(--body)}
+  #zmCtrl input[type=text]{flex:1;min-width:120px}
+  #zmCtrl input[type=text]:focus{outline:none;border-color:var(--shu)}
+  #zmCtrl label{font-size:11.5px;color:var(--ink-faint);display:flex;align-items:center;gap:4px;white-space:nowrap}
+  #zmCtrl input[type=range]{width:80px;accent-color:var(--shu)}
+  #zmMeta{font-size:11px;color:var(--ink-faint);padding:4px 22px 2px;flex:none}
+  #zmScroll{overflow:auto;flex:1}
+  #zmScroll::-webkit-scrollbar{width:7px;height:7px}
+  #zmScroll::-webkit-scrollbar-thumb{background:#e2e2e2;border-radius:999px}
+  #zmTable{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+  #zmTable th{font-size:10.5px;font-weight:500;color:var(--ink-faint);text-align:left;
+    padding:6px 10px;border-bottom:0.5px solid var(--line);cursor:pointer;user-select:none;
+    white-space:nowrap;position:sticky;top:0;background:var(--panel);z-index:1}
+  #zmTable th:hover{color:var(--ink)}
+  #zmTable th.asc::after{content:" ↑"}#zmTable th.desc::after{content:" ↓"}
+  #zmTable td{padding:6px 10px;border-bottom:0.5px solid var(--line);vertical-align:top}
+  #zmTable tr:hover td{background:var(--panel-soft)}
+  #zmTable .n{font-variant-numeric:tabular-nums}
+  #zmTable .cname{font-size:10.5px;color:var(--ink-faint)}
+  #zmTable .seat{display:inline-block;width:22px;height:22px;border-radius:50%;
+    background:var(--panel-soft);border:0.5px solid var(--line);text-align:center;
+    line-height:22px;font-size:10.5px}
+  #zmTable .mbar{height:5px;border-radius:2px;display:block;margin-top:3px}
+  .zm-danger{color:#A32D2D;font-weight:600}
+  .zm-ok{color:#3B6D11}
+  #zmEmpty{display:none;padding:32px;text-align:center;color:var(--ink-faint)}
+
   /* 面板收合鈕（手機才顯示）*/
   #panelToggle{display:none;position:absolute;top:12px;right:12px;z-index:2;width:34px;height:34px;
     border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;
@@ -146,7 +189,8 @@
   <div class="brand">Shinayaka · 村里級 GIS</div>
   <h1><span class="zh">進擊的小黨</span></h1>
   <p class="sub">2014 / 2018 / 2022 三屆縣市・直轄市議員選舉得票（含落選）。為時代力量、台灣基進、小民參政歐巴桑聯盟等小黨佈局而整理。</p>
-  <a href="winners.html" style="display:block;font-size:12.5px;color:var(--shu);text-decoration:none;letter-spacing:.04em;margin:-8px 0 18px;font-weight:500">▸ 小黨當選者・選區地圖</a>
+  <a href="winners.html" style="display:block;font-size:12.5px;color:var(--shu);text-decoration:none;letter-spacing:.04em;margin:-8px 0 4px;font-weight:500">▸ 小黨當選者・選區地圖</a>
+  <button id="zoneBtn" style="display:block;width:100%;text-align:left;font-size:12.5px;color:var(--shu);background:none;border:none;padding:0;margin:0 0 18px;font-weight:500;cursor:pointer;letter-spacing:.04em;font-family:var(--body)">▸ 選區門檻・小黨得票分析表</button>
 
   <div class="grp">
     <label>分析圖層 ・ Layers</label>
@@ -223,6 +267,47 @@
 <div id="info"></div>
 <div class="hint">滑鼠看各里數據・點擊看投開票所下鑽・滾輪縮放</div>
 <div id="loading"><div class="spin"></div><div>載入村里界與選舉資料…</div></div>
+
+<!-- 選區門檻分析 Modal -->
+<div id="zoneModal">
+  <div id="zmBox">
+    <div id="zmHead">
+      <h2>2022 各議員選區：當選門檻 vs 小黨得票</h2>
+      <button id="zmClose" aria-label="關閉">✕</button>
+    </div>
+    <div id="zmCtrl">
+      <select id="zmSel"><option value="">全部縣市</option></select>
+      <input id="zmQ" type="text" placeholder="搜尋選區・人名…">
+      <label>門檻≤<span id="zmCapOut">不限</span>
+        <input type="range" id="zmCap" min="1000" max="30000" step="500" value="30000">
+      </label>
+      <label><input type="checkbox" id="zmOnlySm"> 有小黨</label>
+      <label><input type="checkbox" id="zmOnlyD"> 差距&lt;500</label>
+    </div>
+    <div id="zmMeta"></div>
+    <div id="zmScroll">
+      <table id="zmTable">
+        <colgroup>
+          <col style="width:19%"><col style="width:5%">
+          <col style="width:16%"><col style="width:16%">
+          <col style="width:13%"><col style="width:8%">
+          <col style="width:23%">
+        </colgroup>
+        <thead><tr>
+          <th data-col="label">選區</th>
+          <th data-col="seats" style="text-align:center">席</th>
+          <th data-col="min_win">最低當選（門檻）</th>
+          <th data-col="max_win">最高當選</th>
+          <th data-col="sm_total">小黨得票合計</th>
+          <th data-col="margin">差距</th>
+          <th>小黨候選人</th>
+        </tr></thead>
+        <tbody id="zmBody"></tbody>
+      </table>
+      <div id="zmEmpty">無符合條件的選區</div>
+    </div>
+  </div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/topojson-client@3/dist/topojson-client.min.js"></script>
