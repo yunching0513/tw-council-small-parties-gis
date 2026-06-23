@@ -162,6 +162,7 @@
     const ydis = (state.layer === "trend" || state.layer === "white");
     document.getElementById("yearGrp").style.opacity = ydis ? .4 : 1;
     document.getElementById("yearGrp").style.pointerEvents = ydis ? "none" : "auto";
+    if (window.__renderLabels) window.__renderLabels();   // 標註隨圖層/屆別/焦點更新
   }
 
   // ---- 資訊框 ----
@@ -366,4 +367,61 @@
         .catch(() => { roadsLoading = false; roadLabel.nodeValue = "省道・主要道路"; });
     } else renderRoads();
   };
+
+  // ---- 面量圖得票標註（小黨得票數／率，字級隨縮放）----
+  const labelLayer = L.layerGroup();
+  let labelsOn = false;
+  const centroids = {};
+  const labelNote = document.getElementById("labelNote");
+  const LABEL_MINZOOM = 12, LABEL_CAP = 260;
+  const mapEl = document.getElementById("map");
+
+  function centerOf(vc) {
+    if (centroids[vc]) return centroids[vc];
+    const lyr = layerByVc[vc]; if (!lyr) return null;
+    return (centroids[vc] = lyr.getBounds().getCenter());
+  }
+  function labelVal(vc) {
+    const yr = (state.layer === "trend" || state.layer === "white") ? "2022" : state.year;
+    const d = (D[vc] && D[vc].y) ? D[vc].y[yr] : null;
+    if (!d || !d.tot) return null;
+    const foc = state.layer === "small" ? state.focus : "all";
+    const votes = foc === "all" ? d.sm : (d[foc] || 0);
+    if (votes < 15) return null;            // 太少不標，避免雜亂
+    const share = Math.round(1000 * votes / d.tot) / 10;
+    if (share < 2) return null;
+    return { votes, share };
+  }
+  const labelSize = (z) => z <= 12 ? 9.5 : z === 13 ? 11 : z === 14 ? 12.5 : 14;
+
+  function renderLabels() {
+    labelLayer.clearLayers();
+    if (!labelsOn) { labelNote.textContent = "勾選後放大到鄉鎮層級顯示"; return; }
+    const z = map.getZoom();
+    if (z < LABEL_MINZOOM) { labelNote.textContent = "放大到鄉鎮層級顯示標註"; return; }
+    mapEl.style.setProperty("--lab", labelSize(z) + "px");
+    const b = map.getBounds(), withVotes = z >= 14, cand = [];
+    for (const vc in D) {
+      const v = labelVal(vc); if (!v) continue;
+      const c = centerOf(vc); if (!c) continue;
+      if (c.lat < b.getSouth() || c.lat > b.getNorth() || c.lng < b.getWest() || c.lng > b.getEast()) continue;
+      cand.push({ c, v });
+    }
+    cand.sort((a, b2) => b2.v.share - a.v.share);           // 密集時優先標得票率高者
+    const show = cand.slice(0, LABEL_CAP);
+    for (const { c, v } of show) {
+      const html = `<div class="vlab"><b>${v.share}%</b>${withVotes ? `<i>${v.votes.toLocaleString()} 票</i>` : ""}</div>`;
+      L.marker(c, { icon: L.divIcon({ html, className: "", iconSize: [0, 0] }),
+        interactive: false, keyboard: false }).addTo(labelLayer);
+    }
+    labelNote.textContent = `標註 ${show.length} 里` +
+      (cand.length > LABEL_CAP ? `（密集處取得票率前 ${LABEL_CAP} 高）` : "");
+  }
+  map.on("moveend zoomend", () => { if (labelsOn) renderLabels(); });
+  document.getElementById("labelBtn").onclick = (e) => {
+    labelsOn = !labelsOn; e.currentTarget.classList.toggle("on", labelsOn);
+    if (labelsOn) labelLayer.addTo(map); else labelLayer.remove();
+    renderLabels();
+  };
+  window.__renderLabels = renderLabels;   // 供圖層/屆別切換時更新
 })();

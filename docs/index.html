@@ -60,7 +60,14 @@
   .seg button:hover{border-color:var(--accent)}
   .seg button.on{background:var(--shu-soft);border-color:var(--shu);color:#7a2a20;font-weight:500}
   .seg button .dot{display:inline-block;width:8px;height:8px;border-radius:999px;margin-right:5px;vertical-align:middle;border:1px solid rgba(0,0,0,.15)}
-  #poiNote{font-size:10.5px;color:var(--ink-faint);margin-top:8px;letter-spacing:.01em;line-height:1.5}
+  #poiNote,#labelNote{font-size:10.5px;color:var(--ink-faint);margin-top:8px;letter-spacing:.01em;line-height:1.5}
+  /* 面量圖上的得票標註（字級隨縮放，白描邊在色塊上可讀）*/
+  .vlab{text-align:center;line-height:1.0;font-family:var(--body);white-space:nowrap;
+    transform:translate(-50%,-50%);
+    text-shadow:0 0 2px #fff,0 0 2px #fff,0 0 3px #fff,0 0 4px #fff}
+  .vlab b{display:block;font-weight:700;color:var(--shu);font-size:var(--lab,11px);letter-spacing:.01em}
+  .vlab i{display:block;font-style:normal;font-size:calc(var(--lab,11px) - 2.5px);color:#5f5f5f;
+    font-variant-numeric:tabular-nums;margin-top:1px}
   .layerbtn{display:block;width:100%;text-align:left;padding:13px 14px;margin-bottom:8px;
     border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:5px;cursor:pointer;
     transition:all .5s var(--ease)}
@@ -188,6 +195,14 @@
     <div class="seg">
       <button id="roadBtn" style="flex:1 1 100%"><span class="dot" style="background:#6b7884"></span>省道・主要道路</button>
     </div>
+  </div>
+
+  <div class="grp">
+    <label>得票標註 ・ Labels</label>
+    <div class="seg">
+      <button id="labelBtn" style="flex:1 1 100%">在地圖標小黨得票數／率</button>
+    </div>
+    <div id="labelNote">放大到鄉鎮層級顯示標註</div>
   </div>
 
   <div class="grp">
