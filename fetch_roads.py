@@ -4,8 +4,8 @@
 fetch_roads.py — 抓全台主要道路（國道/省道/主要幹道）→ docs/roads.json
 =====================================================================
 讓候選人規劃掃街路線時有道路骨架可對位。範圍：
-  motorway 國道、trunk 省道快速公路/主要省道、primary 主要市區幹道。
-（不含次要/巷弄道路，否則過密且檔案龐大；市區主幹道由 primary 涵蓋。）
+  trunk 省道/主要快速道路、primary 主要市區幹道。
+（不含國道 motorway——交流道非拜票點；亦不含巷弄，否則過密。）
 資料源 OpenStreetMap Overpass（ODbL）。座標取 4 位小數（~11m）縮小檔案。
 
 輸出 docs/roads.json：GeoJSON FeatureCollection，
@@ -24,7 +24,7 @@ QUERY = """
 [out:json][timeout:300];
 area["ISO3166-1"="TW"]->.tw;
 (
-  way["highway"~"^(motorway|trunk|primary)$"](area.tw);
+  way["highway"~"^(trunk|primary)$"](area.tw);
 );
 out geom;
 """

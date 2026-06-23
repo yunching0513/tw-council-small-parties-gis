@@ -134,11 +134,25 @@
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
     { subdomains: "abcd", pane: "shadowPane", opacity: .8 }).addTo(map);
 
+  // ---- 行政界白框：村里細線在 styleFn；鄉鎮中線、縣市粗線為獨立圖層 ----
+  map.createPane("townPane"); map.getPane("townPane").style.zIndex = 410;
+  map.createPane("countyPane"); map.getPane("countyPane").style.zIndex = 420;
+  function addBoundary(url, pane, weight, opacity) {
+    fetch(url).then(r => r.json()).then(t => {
+      const f = topojson.feature(t, t.objects[Object.keys(t.objects)[0]]);
+      L.geoJSON(f, { renderer: L.canvas({ pane }), interactive: false,
+        style: { stroke: true, color: "#ffffff", weight, opacity, fill: false } }).addTo(map);
+    }).catch(() => {});
+  }
+  addBoundary("towns.topojson", "townPane", 1.2, 0.7);
+  addBoundary("counties.topojson", "countyPane", 2.6, 0.85);
+
   let geoLayer = null, layerByVc = {};
   function styleFn(feat) {
     const vc = feat.properties.VILLCODE, r = valueOf(vc);
-    if (!r) return { stroke: false, fill: true, fillColor: NODATA, fillOpacity: .5 };
-    return { stroke: false, fill: true, fillColor: r.col, fillOpacity: r.op };
+    const b = { stroke: true, color: "#ffffff", weight: 0.4, opacity: 0.5, fill: true };
+    if (!r) return { ...b, fillColor: NODATA, fillOpacity: .5 };
+    return { ...b, fillColor: r.col, fillOpacity: r.op };
   }
 
   function refresh() {
@@ -202,8 +216,8 @@
         layerByVc[f.properties.VILLCODE] = lyr;
         lyr.on("mouseover", () => { showInfo(f.properties.VILLCODE, false);
           lyr.bringToFront && lyr.bringToFront();
-          lyr.setStyle({ stroke: true, color: "#333333", weight: 1 }); });
-        lyr.on("mouseout", () => lyr.setStyle({ stroke: false }));
+          lyr.setStyle({ color: "#333333", weight: 1.3, opacity: 1 }); });
+        lyr.on("mouseout", () => geoLayer.resetStyle(lyr));
         lyr.on("click", () => { showInfo(f.properties.VILLCODE, true);
           map.fitBounds(lyr.getBounds(), { maxZoom: 13, padding: [40,40] }); });
       }
@@ -327,9 +341,7 @@
   const roadRenderer = L.canvas({ pane: "roadPane" });
   let ROADS = null, roadsLoading = false, roadsOn = false, roadLayer = null;
   const roadStyle = (f) => {
-    const hw = f.properties.hw;
-    if (hw === "motorway") return { color: "#54616E", weight: 2.2, opacity: .7 };
-    if (hw === "trunk")    return { color: "#73808D", weight: 1.7, opacity: .62 };
+    if (f.properties.hw === "trunk") return { color: "#6b7884", weight: 1.8, opacity: .66 };
     return { color: "#9aa3ad", weight: 1, opacity: .5 };   // primary 主要市區幹道
   };
   function renderRoads() {
@@ -350,8 +362,8 @@
     if (roadsOn && !ROADS && !roadsLoading) {
       roadsLoading = true; roadLabel.nodeValue = " 載入道路…";
       fetch("roads.json").then(r => r.json())
-        .then(j => { ROADS = j; roadsLoading = false; roadLabel.nodeValue = "國道・省道・主要道路"; renderRoads(); })
-        .catch(() => { roadsLoading = false; roadLabel.nodeValue = "國道・省道・主要道路"; });
+        .then(j => { ROADS = j; roadsLoading = false; roadLabel.nodeValue = "省道・主要道路"; renderRoads(); })
+        .catch(() => { roadsLoading = false; roadLabel.nodeValue = "省道・主要道路"; });
     } else renderRoads();
   };
 })();

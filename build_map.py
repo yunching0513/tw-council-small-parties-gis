@@ -100,6 +100,31 @@ def write_data_js() -> None:
     print(f"  ✓ data.js（{(DOCS/'data.js').stat().st_size/1e6:.1f}MB）")
 
 
+def build_boundaries() -> None:
+    """把村里界溶接成鄉鎮(TOWNCODE)、縣市(COUNTYCODE)界線 → docs/{towns,counties}.topojson"""
+    if not shutil.which("mapshaper") and not _has_npx():
+        print("  （無 mapshaper，略過行政界生成）")
+        return
+    base = ["mapshaper"] if shutil.which("mapshaper") else ["npx", "-y", "mapshaper"]
+    for field, out in (("TOWNCODE", "towns.topojson"), ("COUNTYCODE", "counties.topojson")):
+        cmd = base + [str(GEO_SRC), "-dissolve2", field, "-simplify", "6%", "keep-shapes",
+                      "-o", "force", "format=topojson", str(DOCS / out)]
+        try:
+            subprocess.run(cmd, check=True, timeout=900)
+            print(f"  ✓ {out}（{(DOCS/out).stat().st_size/1e6:.2f}MB）")
+        except Exception as e:  # noqa: BLE001
+            print(f"  界線 {out} 失敗：{e}", file=sys.stderr)
+
+
+def _has_npx() -> bool:
+    try:
+        subprocess.run(["npx", "-y", "mapshaper", "--version"],
+                       capture_output=True, timeout=120, check=True)
+        return True
+    except Exception:
+        return False
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--simplify", type=int, default=8, help="mapshaper 簡化百分比")
@@ -118,6 +143,9 @@ def main() -> None:
     else:
         print("  未偵測到 mapshaper，改用 Python 後備簡化…")
         simplify_python(args.py_tol, 5)
+
+    print("產生行政界（鄉鎮/縣市 白框用）…")
+    build_boundaries()
 
     print("產生地圖資料…")
     write_data_js()
