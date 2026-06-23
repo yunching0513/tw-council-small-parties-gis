@@ -129,6 +129,7 @@
   const map = L.map("map", { preferCanvas: true, renderer: L.canvas(),
     zoomControl: true, minZoom: 7, maxZoom: 15 }).setView([23.7, 120.95], 8);
   window.__map = map;   // 供 console 除錯／程式化控制視野
+  map.zoomControl.setPosition("bottomright");   // 避免被左上面板蓋住
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
     { attribution: "© OpenStreetMap © CARTO", subdomains: "abcd" }).addTo(map);
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
@@ -405,12 +406,14 @@
       const v = labelVal(vc); if (!v) continue;
       const c = centerOf(vc); if (!c) continue;
       if (c.lat < b.getSouth() || c.lat > b.getNorth() || c.lng < b.getWest() || c.lng > b.getEast()) continue;
-      cand.push({ c, v });
+      cand.push({ vc, c, v });
     }
     cand.sort((a, b2) => b2.v.share - a.v.share);           // 密集時優先標得票率高者
     const show = cand.slice(0, LABEL_CAP);
-    for (const { c, v } of show) {
-      const html = `<div class="vlab"><b>${v.share}%</b>${withVotes ? `<i>${v.votes.toLocaleString()} 票</i>` : ""}</div>`;
+    for (const { vc, c, v } of show) {
+      const name = (D[vc] && D[vc].v) || "";                // 里名為主
+      const sub = withVotes ? `${v.share}%・${v.votes.toLocaleString()}票` : `${v.share}%`;
+      const html = `<div class="vlab"><b>${name}</b><i>${sub}</i></div>`;
       L.marker(c, { icon: L.divIcon({ html, className: "", iconSize: [0, 0] }),
         interactive: false, keyboard: false }).addTo(labelLayer);
     }
