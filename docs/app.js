@@ -14,6 +14,11 @@
   };
   // 焦點黨短碼 → 名稱（圖例與資訊面板共用）
   const FOCUS_NAMES = { npp:"時代力量", tsp:"台灣基進", ob:"歐巴桑聯盟", green:"綠黨", sdp:"社民黨" };
+  // 選區參選人名單的政黨配色（含焦點黨）
+  const PG_COLOR = { kmt:"#6E7E96", dpp:"#2E6B4E", tpp:"#6FA89B", npp:"#C8862C", tsp:"#A6392C",
+    green:"#2C8C7A", sdp:"#5C7186", ob:"#9C6BA3", tree:"#5E8C6A", small:"#B8945A",
+    independent:"#A8A8A8", focus:"#A6392C", other:"#C2BBAE" };
+  const SMALL_PG = new Set(["npp","tsp","green","sdp","ob","tree","small","focus"]);
 
   // ---- 狀態 ----
   const state = { layer: "small", year: "2022", focus: "all" };
@@ -168,7 +173,8 @@
 
   // ---- 資訊框 ----
   const info = document.getElementById("info");
-  let POLLS = null;   // 投開票所下鑽資料（pollstations.json）
+  let POLLS = null;     // 投開票所下鑽資料（pollstations.json）
+  let ROSTERS = null;   // 各選區參選人名單（zone_rosters.json）
   function showInfo(vc, full) {
     const n = D[vc]; if (!n) { info.style.display = "none"; return; }
     const Y = n.y || {};
@@ -203,10 +209,28 @@
     } else if (full && POLLS && !POLLS[vc]) {
       polls = `<div style="font-size:10.5px;color:var(--ink-faint);margin:9px 0 0">（此里無 2022 區域議員投開票所資料）</div>`;
     }
+    // 該選區參選人（點擊村里時顯示）：當次該選區全部候選人＋全選區得票
+    let roster = "";
+    if (full && ROSTERS) {
+      const yr = (state.layer === "trend" || state.layer === "white") ? "2022" : state.year;
+      const zid = ROSTERS.v[vc] && ROSTERS.v[vc][yr];
+      const list = (zid != null) ? (ROSTERS.r[yr] || {})[zid] : null;
+      if (list && list.length) {
+        roster = `<div style="font-size:11px;color:var(--ink-faint);margin:9px 0 3px">${yr} 該選區參選人（全選區得票・★當選）</div><table>` +
+          list.map(([name, party, pg, votes, elected]) => {
+            const col = PG_COLOR[pg] || "#999", sm = SMALL_PG.has(pg);
+            const mark = elected ? `<span style="color:var(--shu)">★</span> ` : "　";
+            const nmStyle = sm ? `color:${col};font-weight:700` : "color:#333";
+            return `<tr><td>${mark}<span style="${nmStyle}">${name}</span> ` +
+              `<span class="pill" style="background:${col}22;color:${col};font-size:9.5px;padding:0 6px">${party}</span></td>` +
+              `<td class="r" style="color:#888">${votes.toLocaleString()}</td></tr>`;
+          }).join("") + `</table>`;
+      }
+    }
     info.innerHTML = `<div class="vname">${n.v||"（未知村里）"}</div>`+
       `<div class="vloc">${n.c||""} ${n.t||""}　${vc}</div>`+
       `<table><tr><td style="color:var(--ink-faint)">屆別</td><td class="r" style="color:var(--ink-faint)">小黨%</td><td class="r" style="color:var(--ink-faint)">領先黨</td></tr>`+
-      line("2014") + line("2018") + line("2022") + `</table>` + foc + pl + polls;
+      line("2014") + line("2018") + line("2022") + `</table>` + foc + pl + polls + roster;
     info.style.display = "block";
   }
 
@@ -226,8 +250,9 @@
     }).addTo(map);
     refresh();
     document.getElementById("loading").style.display = "none";
-    // 投開票所下鑽資料（小檔，背景載入；點擊村里時即可顯示）
+    // 投開票所下鑽 + 選區參選人名單（小檔，背景載入；點擊村里時即可顯示）
     fetch("pollstations.json").then(r => r.json()).then(j => { POLLS = j; }).catch(() => {});
+    fetch("zone_rosters.json").then(r => r.json()).then(j => { ROSTERS = j; }).catch(() => {});
   }
 
   async function load() {
