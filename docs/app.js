@@ -33,7 +33,7 @@
                    [9, [185,88,72]], [20, [150,42,34]]];
     return ramp(v, stops);
   }
-  // 白地：金茶 → 朱紅（政黨票挺小黨 0–11%，越暖＝潛力越大）
+  // 待拓展區：金茶 → 朱紅（政黨票挺小黨 0–11%，越暖＝潛力越大）
   function seqWhite(v) {
     if (v == null || isNaN(v)) return NODATA;
     const stops = [[0, [233,229,221]], [2, [219,201,170]], [4, [197,160,110]],
@@ -91,7 +91,7 @@
                  fmt: "已有小黨議員參選（政黨票挺小黨 " + latent + "%）" };
       // 無小黨參選 → 暖色凸顯，越暖＝政黨票潛力越大（有需求、無供給）
       return { val: latent, col: seqWhite(latent), op: 0.9,
-               fmt: "白地・政黨票挺小黨 " + latent + "%（無小黨議員參選）" };
+               fmt: "待拓展區・政黨票挺小黨 " + latent + "%（無小黨議員參選）" };
     }
     return null;
   }
@@ -280,11 +280,11 @@
   if (window.innerWidth <= 680) setCollapsed(true);
   panelToggle.onclick = () => setCollapsed(!panel.classList.contains("collapsed"));
 
-  // ---- 拜票地點 POI（市場/郵局/宮廟/車站）----
+  // ---- 拜票地點 POI（市場/郵局/宗教場所/車站）----
   const POI_STYLE = {
     market:  { c: "#D9772B", label: "市場" },
     post:    { c: "#2E7D46", label: "郵局" },
-    temple:  { c: "#B23A86", label: "宮廟" },
+    temple:  { c: "#B23A86", label: "宗教場所" },
     transit: { c: "#2E6DA4", label: "車站" },
   };
   const POI_CAP = 600;      // 每類在當前視野的顯示上限
