@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>小黨當選者・選區地圖｜進擊的小黨</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@400;500&family=DM+Sans:wght@400;500&family=Noto+Sans+TC:wght@400;500&family=Noto+Serif+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2F2F2;--panel:#FFFFFF;--ink:#333;--ink-strong:#000;--ink-faint:#9a9a9a;
+    --line:#dcdcdc;--accent:#b8a98c;--shu:#A6392C;--ls:0.08em;--ls-wide:0.16em;
+    --ease:cubic-bezier(.22,.61,.36,1);
+    --gothic:"Noto Sans TC",sans-serif;--body:"DM Sans","Noto Sans TC",sans-serif;
+    --latin:"Cormorant","Noto Serif TC",serif;--ming:"Noto Serif TC",serif;
+    --npp:#C8862C;--tsp:#A6392C;--green:#2E6B4E;--sdp:#5C7186;--tree:#5E8C6A;--ob:#9C6BA3;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:var(--body);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  #wrap{display:flex;height:100%}
+  #side{width:392px;flex:none;height:100%;overflow:auto;background:var(--panel);border-right:1px solid var(--line)}
+  #map{flex:1;height:100%;background:#EAEAEA}
+  .leaflet-container{background:#EAEAEA;font-family:var(--body)}
+
+  .head{padding:24px 22px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:5}
+  .brand{font-family:var(--latin);font-size:12px;letter-spacing:var(--ls-wide);color:var(--accent);text-transform:uppercase}
+  .head h1{font-family:var(--ming);font-weight:700;font-size:25px;letter-spacing:.06em;color:var(--ink-strong);margin:3px 0 4px}
+  .head p{font-size:12px;color:var(--ink-faint);line-height:1.6;margin:6px 0 0}
+  .head a.back{font-size:12px;color:var(--shu);text-decoration:none;letter-spacing:var(--ls)}
+  .filt{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .filt button{font-family:var(--body);font-size:12px;padding:5px 10px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;cursor:pointer;letter-spacing:var(--ls);transition:.4s var(--ease)}
+  .filt button.on{background:var(--shu);border-color:var(--shu);color:#fff}
+
+  .list{padding:10px 14px 30px}
+  .card{display:flex;gap:13px;align-items:center;padding:11px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;cursor:pointer;transition:.35s var(--ease);background:#fff}
+  .card:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .card.on{border-color:var(--shu);box-shadow:0 2px 14px rgba(166,57,44,.13)}
+  .ph{width:54px;height:54px;border-radius:50%;flex:none;object-fit:cover;background:#eee;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+  .ph.ini{display:flex;align-items:center;justify-content:center;font-family:var(--ming);font-size:22px;font-weight:500;color:#fff}
+  .meta{min-width:0;flex:1}
+  .nm{font-family:var(--ming);font-weight:700;font-size:17px;letter-spacing:.04em;color:var(--ink-strong)}
+  .badge{display:inline-block;font-size:10.5px;font-weight:500;padding:1px 8px;border-radius:999px;color:#fff;margin-left:7px;vertical-align:middle;letter-spacing:.02em}
+  .sub{font-size:11.5px;color:var(--ink-faint);margin-top:3px;letter-spacing:.01em}
+  .yrs{font-size:11px;color:var(--shu);margin-top:2px;font-variant-numeric:tabular-nums}
+  .wiki{font-size:10.5px;color:#8a96a0;text-decoration:none}
+  .foot{font-size:10px;color:#b0b0b0;padding:0 14px 22px;line-height:1.6}
+  .foot a{color:var(--accent)}
+  #count{font-size:11px;color:var(--ink-faint);padding:8px 16px 2px;letter-spacing:var(--ls)}
+
+  @media (max-width:740px){
+    #wrap{flex-direction:column}
+    #side{width:auto;height:auto;max-height:54%;border-right:none;border-bottom:1px solid var(--line);order:2}
+    #map{order:1;height:46%}
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="side">
+    <div class="head">
+      <div class="brand">Shinayaka · Winners</div>
+      <h1>小黨當選者・選區地圖</h1>
+      <p>2014 / 2018 / 2022 三屆曾當選的小黨縣市・直轄市議員（共 <b id="n">—</b> 位）。點人物卡可在右圖框出其選區。鄉鎮市長歷年無小黨當選紀錄。</p>
+      <a class="back" href="index.html">← 回主地圖</a>
+      <div class="filt" id="filt"></div>
+    </div>
+    <div id="count"></div>
+    <div class="list" id="list"></div>
+    <div class="foot">
+      照片來源：維基百科 / Wikimedia Commons（CC 授權，僅採用自由授權圖）。
+      選區界由村里界溶接（中選會資料・<a href="https://github.com/kiang/db.cec.gov.tw" target="_blank">江明宗整理</a>）。
+    </div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const PARTY = {
+  "時代力量":{c:"var(--npp)",k:"npp"}, "台灣基進":{c:"var(--tsp)",k:"tsp"},
+  "綠黨":{c:"var(--green)",k:"green"}, "社會民主黨":{c:"var(--sdp)",k:"sdp"},
+  "樹黨":{c:"var(--tree)",k:"tree"}, "小民參政歐巴桑聯盟":{c:"var(--ob)",k:"ob"}
+};
+const PC = {npp:"#C8862C",tsp:"#A6392C",green:"#2E6B4E",sdp:"#5C7186",tree:"#5E8C6A",ob:"#9C6BA3"};
+
+const map = L.map("map",{preferCanvas:true,minZoom:7,maxZoom:15}).setView([23.8,120.95],8);
+L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",{attribution:"© OpenStreetMap © CARTO",subdomains:"abcd"}).addTo(map);
+L.tileLayer("https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",{subdomains:"abcd",pane:"shadowPane",opacity:.85}).addTo(map);
+
+let winners=[], zones=null, zoneLayer={}, active=null, filter=null;
+
+function zoneLabel(w){
+  if(!w.zoneCode) return w.county;
+  const m=w.zoneCode.split("-"); return w.county+"第"+(m[1]||"")+"選區";
+}
+function partyKey(p){ return (PARTY[p]||{}).k || "ob"; }
+
+function render(){
+  const list=document.getElementById("list");
+  const items=winners.filter(w=>!filter||w.party===filter);
+  document.getElementById("count").textContent="顯示 "+items.length+" 位";
+  list.innerHTML="";
+  for(const w of items){
+    const pk=partyKey(w.party), col=PC[pk];
+    const card=document.createElement("div"); card.className="card"; card.dataset.id=w.id;
+    const ph = w.photo
+      ? `<img class="ph" src="${w.photo}" alt="${w.name}" loading="lazy">`
+      : `<div class="ph ini" style="background:${col}">${w.name[0]}</div>`;
+    const wiki = w.wiki ? ` ・ <a class="wiki" href="${w.wiki}" target="_blank" rel="noopener">維基↗</a>` : "";
+    card.innerHTML = ph +
+      `<div class="meta"><div class="nm">${w.name}<span class="badge" style="background:${col}">${w.party}</span></div>`+
+      `<div class="sub">${zoneLabel(w)}${wiki}</div>`+
+      `<div class="yrs">當選 ${w.years.join("・")}</div></div>`;
+    card.onclick=()=>select(w.id);
+    list.appendChild(card);
+  }
+}
+
+function styleZone(f,on){ const c=PC[f.properties.pg]||"#888";
+  return {color:c,weight:on?3:1.4,opacity:on?1:.6,fill:true,fillColor:c,fillOpacity:on?.35:.12}; }
+
+function select(id){
+  active=id;
+  document.querySelectorAll(".card").forEach(c=>c.classList.toggle("on",c.dataset.id===id));
+  for(const k in zoneLayer){ const on=k===id; zoneLayer[k].setStyle(styleZone(zoneLayer[k].feature,on)); if(on) zoneLayer[k].bringToFront(); }
+  const lyr=zoneLayer[id];
+  if(lyr){ map.fitBounds(lyr.getBounds(),{maxZoom:13,padding:[30,30]});
+    const card=document.querySelector(`.card[data-id="${id}"]`); if(card) card.scrollIntoView({block:"nearest",behavior:"smooth"}); }
+}
+
+function buildFilter(){
+  const parties=[...new Set(winners.map(w=>w.party))];
+  const f=document.getElementById("filt");
+  const mk=(label,p)=>{const b=document.createElement("button");b.textContent=label;
+    if(!p)b.classList.add("on");
+    b.onclick=()=>{filter=p;[...f.children].forEach(x=>x.classList.remove("on"));b.classList.add("on");render();};
+    f.appendChild(b);};
+  mk("全部",null);
+  for(const p of parties) mk(p,p);
+}
+
+Promise.all([
+  fetch("winners.json").then(r=>r.json()),
+  fetch("winner_zones.json").then(r=>r.json())
+]).then(([w,z])=>{
+  winners=w.sort((a,b)=> (a.party<b.party?-1:a.party>b.party?1:0) || (b.years.slice(-1)[0]-a.years.slice(-1)[0]));
+  zones=z;
+  document.getElementById("n").textContent=winners.length;
+  L.geoJSON(z,{style:f=>styleZone(f,false),
+    onEachFeature:(f,lyr)=>{ zoneLayer[f.properties.id]=lyr;
+      lyr.on("click",()=>select(f.properties.id));
+      lyr.bindTooltip(f.properties.name+"（"+f.properties.party+"）",{sticky:true}); }
+  }).addTo(map);
+  buildFilter(); render();
+});
+</script>
+</body>
+</html>
